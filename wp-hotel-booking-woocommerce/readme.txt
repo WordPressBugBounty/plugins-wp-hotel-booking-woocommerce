@@ -1,11 +1,11 @@
 === WP Hotel Booking WooCommerce ===
 Contributors: thimpress, leehld, phamtungpth
 Donate link: https://thimpress.com/
-Tags: hotel, booking, hotel booking, reservation, reservations, woocommerce
-Requires at least: 6.3
-Tested up to: 6.6
+Tags: hotel, booking, hotel booking, reservation, woocommerce 
+Requires at least: 6.0
+Tested up to: 6.6.2
 Tested Woocommerce up to: 9.1.2
-Stable tag: 1.9.7
+Stable tag: 1.9.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -58,6 +58,9 @@ Take a look at the Premium **[HotelWP - Hotel Wordpress Theme](https://themefore
 == Screenshots ==
 
 == Changelog ==
+
+= 1.9.8 (2024-10-21) =
+~ Fixed: error save setting.
 
 = 1.9.7 (2024-07-23) =
 ~ Fixed: minor bug.

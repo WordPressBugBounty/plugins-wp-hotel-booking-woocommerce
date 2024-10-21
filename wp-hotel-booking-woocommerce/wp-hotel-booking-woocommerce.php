@@ -4,10 +4,10 @@
  * Plugin URI: http://thimpress.com/
  * Description: Support paying for a booking with the payment system provided by WooCommerce
  * Author: ThimPress
- * Version: 1.9.7
+ * Version: 1.9.8
  * Author URI: http://thimpress.com
  * Tags: wphb
- * Requires at least: 6.3
+ * Requires at least: 6.0
  * WC tested up to: 9.1.2
  * Text Domain: wp-hotel-booking-woocommerce
  * Domain Path: /lang/
