@@ -4,7 +4,7 @@
  * Plugin URI: http://thimpress.com/
  * Description: Support paying for a booking with the payment system provided by WooCommerce
  * Author: ThimPress
- * Version: 1.9.9
+ * Version: 1.9.9.1
  * Author URI: http://thimpress.com
  * Tags: wphb
  * Requires at least: 6.0
@@ -26,11 +26,6 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		 * @var null
 		 */
 		protected static $_instance = null;
-
-		/**
-		 * @var bool
-		 */
-		protected static $_wc_loaded = false;
 
 		public $settings = null;
 
@@ -525,34 +520,26 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		 */
 		public function load() {
 			require_once 'includes/functions.php';
-			include_once 'includes/class-hb-wc-settings.php';
-			HB_WC_Settings::instance();
 
 			if ( ! function_exists( 'is_plugin_active' ) ) {
 				include_once ABSPATH . 'wp-admin/includes/plugin.php';
 			}
 
-			if ( ( class_exists( 'TP_Hotel_Booking' ) && is_plugin_active( 'tp-hotel-booking/tp-hotel-booking.php' ) ) || ( is_plugin_active( 'wp-hotel-booking/wp-hotel-booking.php' ) && class_exists( 'WP_Hotel_Booking' ) ) ) {
-				self::$_wc_loaded = true;
+			if ( ! is_plugin_active( 'wp-hotel-booking/wp-hotel-booking.php' ) || ! class_exists( 'WP_Hotel_Booking' ) ) {
+				return;
 			}
 
 			if ( ! self::check_woo_activated() ) {
 				return;
 			}
 
-			// if ( self::$_wc_loaded === true && class_exists( 'WC_Install' ) && is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
-			//  self::$_wc_loaded = true;
-			// } else {
-			//  self::$_wc_loaded = false;
-			// }
-
-			if ( ! self::$_wc_loaded ) {
-				add_action( 'admin_notices', array( __CLASS__, 'admin_notice' ) );
-			}
-
 			self::load_text_domain();
 
+			include_once 'includes/class-hb-wc-settings.php';
+			HB_WC_Settings::instance();
+
 			if ( self::wc_enable() ) {
+
 				$this->_includes();
 				// define plugin enable
 				define( 'HB_WC_ENABLE', true );
@@ -705,11 +692,7 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		 * @return bool
 		 */
 		public static function wc_enable() {
-			if ( ! class_exists( 'WPHB_Settings' ) ) {
-				return false;
-			}
-
-			return self::$_wc_loaded && WPHB_Settings::instance()->get( 'wc_enable' ) == '1';
+			return WPHB_Settings::instance()->get( 'wc_enable' ) == '1';
 		}
 
 		/**
