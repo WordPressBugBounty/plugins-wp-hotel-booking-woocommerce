@@ -26,6 +26,7 @@ if ( ! class_exists( 'HB_WC_Product_Room' ) ) {
 		 * @var
 		 */
 		public $total;
+		public $post;
 
 		/**
 		 * HB_WC_Product_Room constructor.

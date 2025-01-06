@@ -72,9 +72,10 @@ if ( ! class_exists( 'HB_WC_Product_Package' ) ) {
 		public function get_price( $context = 'view' ) {
 
 			global $woocommerce;
-			$cart = $woocommerce->cart->get_cart();
-
-			$qty = $night = 1;
+			$cart    = $woocommerce->cart->get_cart();
+			$hb_cart = WPHB_Cart::instance()->cart_contents;
+			$qty     = 1;
+			$night   = 1;
 
 			$this->package = HB_Extra_Package::instance(
 				$this->get_id(),
@@ -87,7 +88,10 @@ if ( ! class_exists( 'HB_WC_Product_Package' ) ) {
 			foreach ( $cart as $key => $item ) {
 				if ( $item['product_id'] == $this->get_id() ) {
 					if ( get_post_meta( $this->get_id(), 'tp_hb_extra_room_respondent', true ) == 'number' ) {
-						$night = hb_count_nights_two_dates( $item['check_out_date'], $item['check_in_date'] );
+						$parent_item = $hb_cart[ $item['parent_id'] ];
+						if ( ! empty( $parent_item ) ) {
+							$night = hb_count_nights_two_dates( $parent_item->check_out_date, $parent_item->check_in_date );
+						}
 					}
 				}
 			}

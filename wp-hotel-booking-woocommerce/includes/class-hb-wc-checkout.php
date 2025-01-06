@@ -33,7 +33,7 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 			 *
 			 * @since 4.3.0
 			 */
-			add_action( 'woocommerce_checkout_order_created', array( $this, 'woo_add_order' ), 10 );
+			// add_action( 'woocommerce_checkout_order_created', array( $this, 'woo_add_order' ), 10 );
 			/**
 			 * Fires when the Checkout Block/Store API updates an order's meta data.
 			 *
@@ -51,7 +51,9 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 			 *
 			 * @param \WC_Order $order Order object.
 			 */
-			add_action( 'woocommerce_store_api_checkout_update_order_meta', array( $this, 'woo_add_order' ), 10 );
+			// add_action( 'woocommerce_store_api_checkout_update_order_meta', array( $this, 'woo_add_order' ), 10 );
+			add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'woo_add_order_store_api' ) );
+			add_action( 'woocommerce_checkout_order_processed', array( $this, 'woo_add_order_classic' ), 10, 4 );
 
 			// rooms transaction object
 			add_filter( 'hb_transaction_rooms', array( $this, 'woo_transaction_rooms' ), 50, 1 );
@@ -63,67 +65,66 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 			add_filter( 'hotel_booking_tax_metabox', array( $this, 'tax_order' ), 10, 1 );
 			add_filter( 'hotel_booking_label_details', array( $this, 'booking_tax_price' ), 10, 1 );
 			add_filter( 'hotel_booking_admin_book_details', array( $this, 'booking_details_tax_price' ), 10, 2 );
-
-			add_filter(
-				'woocommerce_admin_html_order_item_class',
-				array(
-					$this,
-					'admin_order_room_item_class',
-				),
-				10,
-				3
-			);
 		}
 
 		/**
-		 * @param $class
-		 * @param $item  WC_Order_Item_Product
-		 * @param $order WC_Order
-		 *
-		 * @return string
+		 * Use for classic checkout page
+		 * @param  integer $order_id Woocommerce order id
 		 */
-		public function admin_order_room_item_class( $class, $item, $order ) {
-
-			return $class;
+		public function woo_add_order_classic( $order_id ) {
+			$order = wc_get_order( $order_id );
+			$this->create_wp_hb_order( $order );
 		}
 
 		/**
-		 * WooCoommerce create new order
-		 *
-		 * @param $order_id
-		 *
-		 * @return bool
+		 * Use for blocks checkout page
+		 * @param  WC_Order $order woocommerce order
 		 */
-		public function woo_add_order( WC_Order $wc_order ) {
-			$order_id = $wc_order->get_id();
-			
-			$cart_contents = wc()->cart->cart_contents;
+		public function woo_add_order_store_api( $order ) {
+			// $order_id = $order->get_id();
+			$this->create_wp_hb_order( $order );
+		}
 
-			$create = false;
-			foreach ( $cart_contents as $cart_key => $cart_content ) {
-				if ( get_post_type( $cart_content['product_id'] ) === 'hb_room' ) {
-					$create = true;
-					break;
-				}
-			}
+		/**
+		 * WooCommerce create new order
+		 *
+		 * @param WC_Order $wc_order
+		 *
+		 * @return bool|int
+		 */
+		public function create_wp_hb_order( WC_Order $wc_order ) {
+			try {
+				$cart_contents = wc()->cart->cart_contents;
 
-			if ( $create === true ) {
-				if ( $booking_id = $this->create_booking( $wc_order ) ) {
-					WP_Hotel_Booking::instance()->cart->empty_cart();
-					if ( is_user_logged_in() ) {//avoid case check out by guess with other custom payment method
-						WC()->session->set( 'cart', null );
-						WC()->session->set( 'cart_totals', null );
-						WC()->session->set( 'applied_coupons', null );
-						WC()->session->set( 'coupon_discount_totals', null );
-						WC()->session->set( 'coupon_discount_tax_totals', null );
-						WC()->session->set( 'removed_cart_contents', null );
+				$is_hb_room = false;
+				foreach ( $cart_contents as $cart_key => $cart_content ) {
+					if ( get_post_type( $cart_content['product_id'] ) === 'hb_room' ) {
+						$is_hb_room = true;
+						break;
 					}
-					$wc_order->add_meta_data( '_hb_woo_order_id', $booking_id );
-					$wc_order->save_meta_data();
-					// update_post_meta( $order_id, '_hb_woo_order_id', $booking );
-
-					return true;
 				}
+
+				if ( $is_hb_room === true ) {
+					$booking_id = $this->create_booking( $wc_order );
+					if ( $booking_id ) {
+						WP_Hotel_Booking::instance()->cart->empty_cart();
+						if ( is_user_logged_in() ) {//avoid case check out by guess with other custom payment method
+							WC()->session->set( 'cart', null );
+							WC()->session->set( 'cart_totals', null );
+							WC()->session->set( 'applied_coupons', null );
+							WC()->session->set( 'coupon_discount_totals', null );
+							WC()->session->set( 'coupon_discount_tax_totals', null );
+							WC()->session->set( 'removed_cart_contents', null );
+						}
+						$wc_order->add_meta_data( '_hb_woo_order_id', $booking_id );
+						$wc_order->save_meta_data();
+						// update_post_meta( $order_id, '_hb_woo_order_id', $booking );
+
+						return $booking_id;
+					}
+				}
+			} catch ( Throwable $e ) {
+				error_log( __METHOD__ . ': ' . $e->getMessage() );
 			}
 
 			return false;
@@ -157,8 +158,9 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 			}
 
 			// parse cart item
-			$rooms = array();
-			if ( $_rooms = $woocommerce->cart->get_cart() ) {
+			$rooms  = array();
+			$_rooms = $woocommerce->cart->get_cart();
+			if ( $_rooms ) {
 				foreach ( $_rooms as $key => $room ) {
 					$rooms[ $key ] = apply_filters(
 						'hb_generate_transaction_object_room',
@@ -243,7 +245,8 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 		public function tax_order( $tax ) {
 			global $post;
 
-			if ( ! $order_ID = get_post_meta( $post->ID, '_hb_woo_order_id', true ) ) {
+			$tax = get_post_meta( $post->ID, '_hb_woo_order_id', true );
+			if ( ! $tax ) {
 				return $tax;
 			}
 
@@ -260,11 +263,13 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 		public function booking_tax_price( $val ) {
 			global $post;
 
-			if ( ! $order_woo = get_post_meta( $post->ID, '_hb_woo_order_id', true ) ) {
+			$order_woo = get_post_meta( $post->ID, '_hb_woo_order_id', true );
+			if ( ! $order_woo ) {
 				return $val;
 			}
 
-			if ( ! $currency = get_post_meta( $post->ID, '_hb_currency', true ) ) {
+			$currency = get_post_meta( $post->ID, '_hb_currency', true );
+			if ( ! $currency ) {
 				return $val;
 			}
 
@@ -280,7 +285,8 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 		 * @return string
 		 */
 		public function booking_details_tax_price( $html, $booking ) {
-			if ( ! $order_woo = $booking->woo_order_id ) {
+			$order_woo = $booking->woo_order_id;
+			if ( ! $order_woo ) {
 				return $html;
 			}
 

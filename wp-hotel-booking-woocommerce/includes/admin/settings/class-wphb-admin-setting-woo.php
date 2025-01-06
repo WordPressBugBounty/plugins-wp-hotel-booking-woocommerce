@@ -20,7 +20,7 @@ class WPHB_Admin_Setting_Woocommerce extends WPHB_Admin_Setting_Page {
 
 	public $title = null;
 
-	function __construct() {
+	public function __construct() {
 		$this->title = __( 'Woocommerce', 'wp-hotel-booking' );
 
 		parent::__construct();
@@ -31,8 +31,8 @@ class WPHB_Admin_Setting_Woocommerce extends WPHB_Admin_Setting_Page {
 			'hotel_booking_admin_setting_fields_' . $this->id,
 			array(
 				array(
-					'type'  => 'section_start',
-					'id'    => 'tp_debug_mode',
+					'type' => 'section_start',
+					'id'   => 'tp_debug_mode',
 				),
 				array(
 					'id'      => WPHB_Settings::instance()->get_field_name( 'wc_enable' ),

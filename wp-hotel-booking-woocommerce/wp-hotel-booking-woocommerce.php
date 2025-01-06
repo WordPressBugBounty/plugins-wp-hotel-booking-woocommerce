@@ -4,11 +4,11 @@
  * Plugin URI: http://thimpress.com/
  * Description: Support paying for a booking with the payment system provided by WooCommerce
  * Author: ThimPress
- * Version: 1.9.8
+ * Version: 1.9.9
  * Author URI: http://thimpress.com
  * Tags: wphb
  * Requires at least: 6.0
- * WC tested up to: 9.1.2
+ * WC tested up to: 9.5.1
  * Text Domain: wp-hotel-booking-woocommerce
  * Domain Path: /lang/
  */
@@ -32,6 +32,8 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		 */
 		protected static $_wc_loaded = false;
 
+		public $settings = null;
+
 		/**
 		 * WP_Hotel_Booking_Woocommerce constructor.
 		 */
@@ -39,134 +41,17 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 
 			$this->_defines();
 
-			require_once 'includes/functions.php';
-			require_once 'includes/class-hb-wc-settings.php';
-
 			// declare_compatibility for Woo new from 8.3.
-			add_action( 'before_woocommerce_init', function () {
-				if ( class_exists( FeaturesUtil::class ) ) {
-					FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__ );
+			add_action(
+				'before_woocommerce_init',
+				function () {
+					if ( class_exists( FeaturesUtil::class ) ) {
+						FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__ );
+					}
 				}
-			} );
+			);
 
-			if ( self::wc_enable() ) {
-				$this->_includes();
-				// define plugin enable
-				define( 'HB_WC_ENABLE', true );
-				add_action( 'wp_enqueue_scripts', array( $this, 'frontend_scripts' ) );
-
-				//              // woommerce currency
-				add_filter( 'hb_currency', array( $this, 'woocommerce_currency' ), 50 );
-				add_filter( 'hotel_booking_payment_current_currency', array( $this, 'woocommerce_currency' ), 50 );
-				add_filter( 'hb_currency_symbol', array( $this, 'woocommerce_currency_symbol' ), 50, 2 );
-				add_filter( 'hb_price_format', array( $this, 'woocommerce_price_format' ), 50, 3 );
-
-				// filter price
-				add_filter( 'hotel_booking_room_total_price_incl_tax', array( $this, 'room_price_tax' ), 10, 2 );
-
-				add_filter( 'hotel_booking_room_item_total_exclude_tax', array( $this, 'room_price_regular_excl' ), 10, 2 );
-				add_filter( 'hotel_booking_room_item_total_include_tax', array( $this, 'room_price_regular_incl' ), 10, 2 );
-
-				add_filter( 'hotel_booking_package_item_total_exclude_tax', array( $this, 'packages_regular_price_excl' ), 10, 2 );
-				add_filter( 'hotel_booking_package_item_total_include_tax', array( $this, 'packages_regular_price_incl' ), 10, 2 );
-				add_filter( 'hotel_booking_package_amount_singular', array( $this, 'packages_singular_price' ), 10, 2 );
-
-				// extra package price
-				add_filter( 'hotel_booking_extra_package_regular_price_incl_tax', array( $this, 'packages_regular_price_tax' ), 10, 3 );
-
-				// cart amount(item total price)
-				add_filter(
-					'hotel_booking_cart_item_total_amount',
-					array(
-						$this,
-						'hotel_booking_cart_item_total_amount',
-					),
-					10,
-					4
-				);
-				add_filter(
-					'hotel_booking_cart_item_amount_singular',
-					array(
-						$this,
-						'hotel_booking_cart_item_amount_singular',
-					),
-					10,
-					4
-				);
-				// tax enable
-				add_filter( 'hb_price_including_tax', array( $this, 'hb_price_including_tax' ), 10, 2 );
-
-				// trigger WC cart room item
-				add_action( 'hotel_booking_added_cart', array( $this, 'hotel_add_to_cart' ), 10, 3 );
-				// trigger WC remove cart room item
-				add_action( 'hotel_booking_remove_cart_item', array( $this, 'hotel_remove_cart_item' ), 10, 2 );
-				// return cart url
-				add_filter( 'hb_cart_url', array( $this, 'hotel_cart_url' ) );
-				// return checkout url
-				add_filter( 'hb_checkout_url', array( $this, 'hotel_checkout_url' ), 999 );
-
-				// display tax price
-				add_filter( 'hotel_booking_cart_tax_display', array( $this, 'cart_tax_display' ) );
-				add_filter( 'hotel_booking_get_cart_total', array( $this, 'cart_total_result_display' ) );
-				add_action( 'template_redirect', array( $this, 'template_redirect' ), 50 );
-
-				// add woo cart item
-				add_filter( 'woocommerce_add_cart_item', array( $this, 'add_cart_item' ), 10, 2 );
-				// remove woo cart item
-				add_action( 'woocommerce_remove_cart_item', array( $this, 'woocommerce_remove_cart_item' ), 10, 2 );
-				// update woo cart item
-				add_filter( 'woocommerce_update_cart_validation', array( $this, 'woocommerce_update_cart' ), 10, 4 );
-				// restore woo cart item
-				add_action( 'woocommerce_restore_cart_item', array( $this, 'woocommerce_restore_cart_item' ), 10, 2 );
-
-				add_filter(
-					'woocommerce_cart_item_class',
-					array(
-						$this,
-						'woocommerce_cart_package_item_class',
-					),
-					10,
-					3
-				);
-
-				add_filter( 'woocommerce_cart_item_remove_link', array( $this, 'remove_cart_extra_required' ), 10, 2 );
-
-				add_action(
-					'woocommerce_order_status_changed',
-					array(
-						$this,
-						'woocommerce_order_status_changed',
-					),
-					10,
-					4
-				);
-
-				// sort room - product item
-				add_action( 'woocommerce_cart_loaded_from_session', array( $this, 'woo_sort_rooms' ), 999 );
-
-				add_filter( 'woocommerce_product_class', array( $this, 'product_class' ), 10, 4 );
-				add_filter(
-					'woocommerce_get_cart_item_from_session',
-					array(
-						$this,
-						'get_cart_item_from_session',
-					),
-					10,
-					3
-				);
-				// tax enable
-				add_filter( 'hotel_booking_extra_tax_enable', array( $this, 'tax_enable' ) );
-
-				// override woo mail templates
-				add_filter( 'woocommerce_locate_template', array( $this, 'woo_booking_mail_template' ), 10, 3 );
-
-				// add order item class
-				add_filter( 'woocommerce_get_order_item_classname', array( $this, 'get_classname_wphb_wc_order_item' ), 10, 3 );
-				// add order item line
-				add_action( 'woocommerce_checkout_create_order_line_item', array( $this, 'order_item_line' ), 10, 4 );
-			} else {
-				define( 'HB_WC_ENABLE', false );
-			}
+			add_action( 'init', [ $this, 'load' ] );
 		}
 
 		/**
@@ -188,11 +73,10 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			return true;
 		}
 
-
 		public static function show_note_errors_install_plugin_woo() {
 			?>
 			<div class="notice notice-error">
-				<p><?php echo 'Please active plugin <strong>Woocomerce</strong> before active plugin <strong>WP Hotel Booking WooCommerce</strong>'; ?></p>
+				<p><?php echo 'Please active plugin <strong>Woocommerce</strong> before active plugin <strong>WP Hotel Booking Woocommerce</strong>'; ?></p>
 			</div>
 			<?php
 		}
@@ -236,7 +120,7 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 
 		// tax enable
 		function tax_enable( $enable ) {
-			// woocommercer option
+			// Woocommerce option
 			if ( get_option( 'woocommerce_tax_display_shop' ) === 'incl' ) {
 				return true;
 			}
@@ -262,9 +146,9 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			$cart_items = $woocommerce->cart->get_cart();
 
 			$woo_cart_param = array(
-				'product_id'     => $params['product_id'],
-				'check_in_date'  => $params['check_in_date'],
-				'check_out_date' => $params['check_out_date'],
+				'product_id'     => $params['product_id'] ?? 0,
+				'check_in_date'  => $params['check_in_date'] ?? '',
+				'check_out_date' => $params['check_out_date'] ?? '',
 			);
 
 			if ( isset( $params['parent_id'] ) ) {
@@ -639,7 +523,10 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		/**
 		 * Load function.
 		 */
-		public static function load() {
+		public function load() {
+			require_once 'includes/functions.php';
+			include_once 'includes/class-hb-wc-settings.php';
+			HB_WC_Settings::instance();
 
 			if ( ! function_exists( 'is_plugin_active' ) ) {
 				include_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -659,12 +546,130 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			//  self::$_wc_loaded = false;
 			// }
 
-			WP_Hotel_Booking_Woocommerce::instance();
 			if ( ! self::$_wc_loaded ) {
 				add_action( 'admin_notices', array( __CLASS__, 'admin_notice' ) );
 			}
 
 			self::load_text_domain();
+
+			if ( self::wc_enable() ) {
+				$this->_includes();
+				// define plugin enable
+				define( 'HB_WC_ENABLE', true );
+				add_action( 'wp_enqueue_scripts', array( $this, 'frontend_scripts' ) );
+
+				// Woocommerce currency
+				add_filter( 'hb_currency', array( $this, 'woocommerce_currency' ), 50 );
+				add_filter( 'hotel_booking_payment_current_currency', array( $this, 'woocommerce_currency' ), 50 );
+				add_filter( 'hb_currency_symbol', array( $this, 'woocommerce_currency_symbol' ), 50, 2 );
+				add_filter( 'hb_price_format', array( $this, 'woocommerce_price_format' ), 50, 3 );
+
+				// filter price
+				add_filter( 'hotel_booking_room_total_price_incl_tax', array( $this, 'room_price_tax' ), 10, 2 );
+
+				add_filter( 'hotel_booking_room_item_total_exclude_tax', array( $this, 'room_price_regular_excl' ), 10, 2 );
+				add_filter( 'hotel_booking_room_item_total_include_tax', array( $this, 'room_price_regular_incl' ), 10, 2 );
+
+				add_filter( 'hotel_booking_package_item_total_exclude_tax', array( $this, 'packages_regular_price_excl' ), 10, 2 );
+				add_filter( 'hotel_booking_package_item_total_include_tax', array( $this, 'packages_regular_price_incl' ), 10, 2 );
+				add_filter( 'hotel_booking_package_amount_singular', array( $this, 'packages_singular_price' ), 10, 2 );
+
+				// extra package price
+				add_filter( 'hotel_booking_extra_package_regular_price_incl_tax', array( $this, 'packages_regular_price_tax' ), 10, 3 );
+
+				// cart amount(item total price)
+				add_filter(
+					'hotel_booking_cart_item_total_amount',
+					array(
+						$this,
+						'hotel_booking_cart_item_total_amount',
+					),
+					10,
+					4
+				);
+				add_filter(
+					'hotel_booking_cart_item_amount_singular',
+					array(
+						$this,
+						'hotel_booking_cart_item_amount_singular',
+					),
+					10,
+					4
+				);
+				// tax enable
+				add_filter( 'hb_price_including_tax', array( $this, 'hb_price_including_tax' ), 10, 2 );
+
+				// trigger WC cart room item
+				add_action( 'hotel_booking_added_cart', array( $this, 'hotel_add_to_cart' ), 10, 3 );
+				// trigger WC remove cart room item
+				add_action( 'hotel_booking_remove_cart_item', array( $this, 'hotel_remove_cart_item' ), 10, 2 );
+				// return cart url
+				add_filter( 'hb_cart_url', array( $this, 'hotel_cart_url' ) );
+				// return checkout url
+				add_filter( 'hb_checkout_url', array( $this, 'hotel_checkout_url' ), 999 );
+
+				// display tax price
+				add_filter( 'hotel_booking_cart_tax_display', array( $this, 'cart_tax_display' ) );
+				add_filter( 'hotel_booking_get_cart_total', array( $this, 'cart_total_result_display' ) );
+				add_action( 'template_redirect', array( $this, 'template_redirect' ), 50 );
+
+				// add woo cart item
+				add_filter( 'woocommerce_add_cart_item', array( $this, 'add_cart_item' ), 10, 2 );
+				// remove woo cart item
+				add_action( 'woocommerce_remove_cart_item', array( $this, 'woocommerce_remove_cart_item' ), 10, 2 );
+				// update woo cart item
+				add_filter( 'woocommerce_update_cart_validation', array( $this, 'woocommerce_update_cart' ), 10, 4 );
+				// restore woo cart item
+				add_action( 'woocommerce_restore_cart_item', array( $this, 'woocommerce_restore_cart_item' ), 10, 2 );
+
+				add_filter(
+					'woocommerce_cart_item_class',
+					array(
+						$this,
+						'woocommerce_cart_package_item_class',
+					),
+					10,
+					3
+				);
+
+				add_filter( 'woocommerce_cart_item_remove_link', array( $this, 'remove_cart_extra_required' ), 10, 2 );
+
+				add_action(
+					'woocommerce_order_status_changed',
+					array(
+						$this,
+						'woocommerce_order_status_changed',
+					),
+					10,
+					4
+				);
+
+				// sort room - product item
+				add_action( 'woocommerce_cart_loaded_from_session', array( $this, 'woo_sort_rooms' ), 999 );
+
+				add_filter( 'woocommerce_product_class', array( $this, 'product_class' ), 10, 4 );
+				add_filter(
+					'woocommerce_get_cart_item_from_session',
+					array(
+						$this,
+						'get_cart_item_from_session',
+					),
+					10,
+					3
+				);
+				// tax enable
+				add_filter( 'hotel_booking_extra_tax_enable', array( $this, 'tax_enable' ) );
+
+				// override woo mail templates
+				add_filter( 'woocommerce_locate_template', array( $this, 'woo_booking_mail_template' ), 10, 3 );
+
+				// add order item class
+				add_filter( 'woocommerce_get_order_item_classname', array( $this, 'get_classname_wphb_wc_order_item' ), 10, 3 );
+				// add order item line
+				add_action( 'woocommerce_checkout_create_order_line_item', array( $this, 'order_item_line' ), 10, 4 );
+			} else {
+				define( 'HB_WC_ENABLE', false );
+			}
 		}
 
 		/**
@@ -704,7 +709,7 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 				return false;
 			}
 
-			return self::$_wc_loaded && WPHB_Settings::instance()->get( 'wc_enable' ) == 'yes';
+			return self::$_wc_loaded && WPHB_Settings::instance()->get( 'wc_enable' ) == '1';
 		}
 
 		/**
@@ -1175,4 +1180,4 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 	}
 }
 
-add_action( 'plugins_loaded', array( 'WP_Hotel_Booking_Woocommerce', 'load' ) );
+WP_Hotel_Booking_Woocommerce::instance();
