@@ -2,10 +2,9 @@
 Contributors: thimpress, leehld, phamtungpth
 Donate link: https://thimpress.com/
 Tags: hotel, booking, hotel booking, reservation, woocommerce.
-Requires at least: 6.0
-Tested up to: 6.7.1
+Tested up to: 6.7
 Tested Woocommerce up to: 9.1.2
-Stable tag: 1.9.9.1
+Stable tag: 2.0.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -59,8 +58,11 @@ Take a look at the Premium **[HotelWP - Hotel Wordpress Theme](https://themefore
 
 == Changelog ==
 
+= 2.0.0 (2025-04-15) =
+~ Fixed: minor bug.
+
 = 1.9.9 (2025-01-06) =
-~ Update hook to checkout.
+~ Update hook to check out.
 ~ Fixed: calculate extra packages type number.
 
 = 1.9.8 (2024-10-21) =

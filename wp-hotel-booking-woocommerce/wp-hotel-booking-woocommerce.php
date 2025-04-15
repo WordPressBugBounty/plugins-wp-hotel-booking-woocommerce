@@ -4,7 +4,7 @@
  * Plugin URI: http://thimpress.com/
  * Description: Support paying for a booking with the payment system provided by WooCommerce
  * Author: ThimPress
- * Version: 1.9.9.1
+ * Version: 2.0.0
  * Author URI: http://thimpress.com
  * Tags: wphb
  * Requires at least: 6.0
@@ -810,27 +810,20 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 
 			add_filter( 'hotel_booking_room_total_price_incl_tax', array( $this, 'room_price_tax' ), 10, 2 );
 
-			if ( ! function_exists( 'wc_get_price_including_tax' ) ) {
-				// woo get price
-				$product        = new WC_Product( $room->post->ID );
-				$price_incl_tax = $product->get_price_including_tax( $room->get_data( 'quantity' ), $room->amount_singular_exclude_tax );
-				$price_excl_tax = $product->get_price_excluding_tax( $room->get_data( 'quantity' ), $room->amount_singular_exclude_tax );
-			} else {
-				$price_incl_tax = wc_get_price_including_tax(
-					$room,
-					array(
-						'qty'   => $room->get_data( 'quantity' ),
-						'price' => $room->amount_singular_exclude_tax,
-					)
-				);
-				$price_excl_tax = wc_get_price_excluding_tax(
-					$room,
-					array(
-						'qty'   => $room->get_data( 'quantity' ),
-						'price' => $room->amount_singular_exclude_tax,
-					)
-				);
-			}
+			$price_incl_tax = (float) wc_get_price_including_tax(
+				$room,
+				array(
+					'qty'   => $room->get_data( 'quantity' ),
+					'price' => $room->amount_singular_exclude_tax,
+				)
+			);
+			$price_excl_tax = (float) wc_get_price_excluding_tax(
+				$room,
+				array(
+					'qty'   => $room->get_data( 'quantity' ),
+					'price' => $room->amount_singular_exclude_tax,
+				)
+			);
 
 			return $price_incl_tax - $price_excl_tax;
 		}
