@@ -4,11 +4,12 @@
  * Plugin URI: http://thimpress.com/
  * Description: Support paying for a booking with the payment system provided by WooCommerce
  * Author: ThimPress
- * Version: 2.0.0
+ * Version: 2.0.1
  * Author URI: http://thimpress.com
  * Tags: wphb
  * Requires at least: 6.0
- * WC tested up to: 9.5.1
+ * Requires PHP: 7.0
+ * WC tested up to: 9.9.5
  * Text Domain: wp-hotel-booking-woocommerce
  * Domain Path: /lang/
  */
@@ -767,10 +768,10 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		}
 
 		public function room_price_regular_excl( $total, $room ) {
-
-			if ( wc_prices_include_tax() ) {
+			$product = wc_get_product( $room->get_id() );
+			if ( $product && wc_prices_include_tax() ) {
 				$total = wc_get_price_excluding_tax(
-					$room,
+					$product,
 					array(
 						'qty'   => $room->get_data( 'quantity' ),
 						'price' => $room->amount_singular_exclude_tax,
@@ -782,9 +783,10 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		}
 
 		public function room_price_regular_incl( $total, $room ) {
-			if ( wc_prices_include_tax() ) {
+			$product = wc_get_product( $room->get_id() );
+			if ( $product && wc_prices_include_tax() ) {
 				$total = wc_get_price_including_tax(
-					$room,
+					$product,
 					array(
 						'qty'   => $room->get_data( 'quantity' ),
 						'price' => $room->amount_singular_exclude_tax,
@@ -806,19 +808,22 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		public function room_price_tax( $tax_price, $room ) {
 			remove_filter( 'hotel_booking_room_total_price_incl_tax', array( $this, 'room_price_tax' ), 10 );
 			// woo get price
-			$product = ( $room );
+			$product = wc_get_product( $room->get_id() );
+			if ( ! $product ) {
+				return $tax_price;
+			}
 
 			add_filter( 'hotel_booking_room_total_price_incl_tax', array( $this, 'room_price_tax' ), 10, 2 );
 
 			$price_incl_tax = (float) wc_get_price_including_tax(
-				$room,
+				$product,
 				array(
 					'qty'   => $room->get_data( 'quantity' ),
 					'price' => $room->amount_singular_exclude_tax,
 				)
 			);
 			$price_excl_tax = (float) wc_get_price_excluding_tax(
-				$room,
+				$product,
 				array(
 					'qty'   => $room->get_data( 'quantity' ),
 					'price' => $room->amount_singular_exclude_tax,
