@@ -102,7 +102,7 @@ do_action( 'woocommerce_before_cart' ); ?>
                     </td>
 
 					<?php if ( $have_room ) { ?>
-                        <td class="product-check-in-out"><?php echo isset( $cart_item['check_in_date'] ) ? date_i18n( hb_get_date_format(), strtotime( $cart_item['check_in_date'] ) ) . ' - ' . date_i18n( hb_get_date_format(), strtotime( $cart_item['check_out_date'] ) ) : ''; ?></td>
+                        <td class="product-check-in-out"><?php echo isset( $cart_item['check_in_date'] ) && get_post_type( $cart_item['product_id'] ) === 'hb_room' ? date_i18n( hb_get_date_format(), strtotime( $cart_item['check_in_date'] ) ) . ' - ' . date_i18n( hb_get_date_format(), strtotime( $cart_item['check_out_date'] ) ) : ''; ?></td>
 					<?php } ?>
 
                     <td class="product-price"

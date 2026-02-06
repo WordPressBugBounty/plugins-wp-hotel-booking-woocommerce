@@ -2,7 +2,7 @@
 Contributors: thimpress, leehld, phamtungpth
 Donate link: https://thimpress.com/
 Tags: hotel, booking, hotel booking, reservation, woocommerce.
-Tested up to: 6.8
+Tested up to: 6.9
 Tested Woocommerce up to: 9.9.5
 Stable tag: 2.0.1
 License: GPLv2 or later
@@ -57,6 +57,10 @@ Take a look at the Premium **[HotelWP - Hotel Wordpress Theme](https://themefore
 == Screenshots ==
 
 == Changelog ==
+
+= 2.0.2 (2025-12-30) =
+~ Fixed: bug cannot update order item quantity when checkout by wc checkout block page.
+~ Update: display checkin/out date on wc cart items(blocks page).
 
 = 2.0.1 (2025-07-01) =
 ~ Fixed: calculate tax.

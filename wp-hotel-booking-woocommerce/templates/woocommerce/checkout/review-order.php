@@ -47,7 +47,7 @@ foreach ( $cart_items as $key => $cart_item ) {
 					<?php echo wc_get_formatted_cart_item_data( $cart_item ); ?>
 				</td>
 				<td class="product-check-in-out">
-					<?php echo isset( $cart_item['check_in_date'] ) ? date_i18n( hb_get_date_format(), strtotime( $cart_item['check_in_date'] ) ) . ' - ' . date_i18n( hb_get_date_format(), strtotime( $cart_item['check_out_date'] ) ) : ''; ?>
+					<?php echo isset( $cart_item['check_in_date'] ) && get_post_type( $cart_item['product_id'] ) === 'hb_room' ? date_i18n( hb_get_date_format(), strtotime( $cart_item['check_in_date'] ) ) . ' - ' . date_i18n( hb_get_date_format(), strtotime( $cart_item['check_out_date'] ) ) : ''; ?>
 				</td>
 				<td class="product-total">
 					<?php echo apply_filters( 'woocommerce_cart_item_subtotal', WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] ), $cart_item, $cart_item_key ); ?>

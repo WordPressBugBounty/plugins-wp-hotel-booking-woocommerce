@@ -4,7 +4,7 @@
  * Plugin URI: http://thimpress.com/
  * Description: Support paying for a booking with the payment system provided by WooCommerce
  * Author: ThimPress
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author URI: http://thimpress.com
  * Tags: wphb
  * Requires at least: 6.0
@@ -48,6 +48,9 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			);
 
 			add_action( 'init', [ $this, 'load' ] );
+
+			// Expose booking dates to WooCommerce Blocks Store API
+			add_action( 'woocommerce_blocks_loaded', array( $this, 'register_store_api_extension' ), 20 );
 		}
 
 		/**
@@ -655,6 +658,9 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 				add_filter( 'woocommerce_get_order_item_classname', array( $this, 'get_classname_wphb_wc_order_item' ), 10, 3 );
 				// add order item line
 				add_action( 'woocommerce_checkout_create_order_line_item', array( $this, 'order_item_line' ), 10, 4 );
+
+				// Hide permalink for hotel extra products in blocks
+				add_filter( 'woocommerce_cart_item_permalink', array( $this, 'hide_hotel_extra_permalink' ), 10, 3 );
 			} else {
 				define( 'HB_WC_ENABLE', false );
 			}
@@ -701,6 +707,11 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		 */
 		public function frontend_scripts() {
 			wp_enqueue_script( 'hb_wc_checkout', HB_WC_PLUGIN_URL . 'assets/js/frontend/site.min.js', array( 'jquery' ) );
+			wp_enqueue_script( 'wphb_wc_hotel', HB_WC_PLUGIN_URL . 'assets/js/frontend/hotel.js', array( 'wc-blocks-checkout' ), uniqid(), true );
+			wp_localize_script( 'wphb_wc_hotel', 'wphbWcSettings', array(
+				'checkin' => __( 'Check-in', 'wp-hotel-booking-woocommerce' ),
+				'checkout' => __( 'Check-out', 'wp-hotel-booking-woocommerce' ),
+			) );
 			wp_enqueue_style( 'hb_wc_site', HB_WC_PLUGIN_URL . 'assets/css/frontend/site.css' );
 		}
 
@@ -1157,6 +1168,81 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			}
 
 			return $classname;
+		}
+
+		/**
+		 * Register WooCommerce Blocks Store API extension to expose booking dates
+		 */
+		public function register_store_api_extension() {
+			// Check if WooCommerce Blocks Store API is available
+			if ( ! function_exists( 'woocommerce_store_api_register_endpoint_data' ) ) {
+				return;
+			}
+
+			woocommerce_store_api_register_endpoint_data(
+				array(
+					'endpoint'        => 'cart-item',
+					'namespace'       => 'wp-hotel-booking',
+					'schema_callback' => array( $this, 'extend_cart_item_schema' ),
+					'data_callback'   => array( $this, 'extend_cart_item_data' ),
+				)
+			);
+		}
+
+		/**
+		 * Extend cart item schema to include booking dates
+		 */
+		public function extend_cart_item_schema() {
+			return array(
+				'check_in_date'  => array(
+					'description' => __( 'Check-in date for wp hotel booking', 'wp-hotel-booking-woocommerce' ),
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'check_out_date' => array(
+					'description' => __( 'Check-out date for wp hotel booking', 'wp-hotel-booking-woocommerce' ),
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'is_hotel_extra' => array(
+					'description' => __( 'Whether this is a hotel extra room product', 'wp-hotel-booking-woocommerce' ),
+					'type'        => 'boolean',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+			);
+		}
+
+		/**
+		 * Add booking dates data to cart item
+		 */
+		public function extend_cart_item_data( $cart_item ) {
+			$data = array();
+
+			$product_type = get_post_type( $cart_item['product_id'] );
+
+			// Check if this cart item has booking dates
+			if ( $product_type === 'hb_room' && ( isset( $cart_item['check_in_date'] ) && isset( $cart_item['check_out_date'] ) ) ) {
+				$data['check_in_date']  = $cart_item['check_in_date'];
+				$data['check_out_date'] = $cart_item['check_out_date'];
+			}
+
+			// Check if this is a hotel extra room product
+			$data['is_hotel_extra'] = ( $product_type === 'hb_extra_room' );
+
+			return $data;
+		}
+
+		/**
+		 * Hide permalink for hotel extra room products
+		 */
+		public function hide_hotel_extra_permalink( $permalink, $cart_item, $cart_item_key ) {
+			if ( isset( $cart_item['product_id'] ) && get_post_type( $cart_item['product_id'] ) === 'hb_extra_room' ) {
+				return '';
+			}
+			return $permalink;
 		}
 	}
 }

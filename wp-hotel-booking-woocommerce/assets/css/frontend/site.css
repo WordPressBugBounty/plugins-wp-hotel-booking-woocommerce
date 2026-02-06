@@ -6,6 +6,35 @@
     width: 40px !important;
 }
 
-body.woocommerce-cart .woocommerce-cart-form tr.required-extra .product-remove a, body.woocommerce-cart .woocommerce-cart-form .hb_wc_cart_package_item .product-thumbnail a {
+body.woocommerce-cart .woocommerce-cart-form tr.required-extra .product-remove a,
+body.woocommerce-cart .woocommerce-cart-form .hb_wc_cart_package_item .product-thumbnail a {
+    display: none;
+}
+
+/* Hotel Booking Dates Display in WooCommerce Blocks */
+.hb-room-booking-dates {
+    margin-top: 8px;
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.6;
+}
+
+.hb-check-in-date,
+.hb-check-out-date {
+    margin: 4px 0;
+}
+
+.hb-room-booking-dates strong {
+    font-weight: 600;
+    color: #333;
+}
+
+.hb-room-booking-dates span {
+    color: #555;
+}
+
+/* Hide product images for hotel extra room products in WooCommerce Blocks */
+.wc-block-components-order-summary-item.hb-hotel-extra-item .wc-block-components-order-summary-item__image img,
+.wc-block-cart-items__row.hb-hotel-extra-item .wc-block-cart-item__image img {
     display: none;
 }

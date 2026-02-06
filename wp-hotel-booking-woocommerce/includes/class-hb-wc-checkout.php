@@ -231,6 +231,19 @@ if ( ! class_exists( 'HB_WC_Checkout' ) ) {
 					}
 				}
 			}
+			$wc_order_items = $order->get_items();
+			$hb_order_items = $transaction->order_items;
+			//Update the HB order item quantity when user checkout by the WooCommerce Checkout Block page, as it cannot be updated the same way as in the legacy checkout.
+			if ( ! empty( $wc_order_items ) && ! empty( $hb_order_items ) ) {
+				foreach ( $hb_order_items as $key => $hb_item ) {
+					foreach ( $wc_order_items as $wc_item ) {
+						if ( $wc_item->get_product_id() === $hb_item['product_id'] ) {
+							$hb_order_items[ $key ]['qty'] = $wc_item->get_quantity();
+						}
+					}
+				}
+				$transaction->order_items = $hb_order_items;
+			}
 
 			return $transaction;
 		}
