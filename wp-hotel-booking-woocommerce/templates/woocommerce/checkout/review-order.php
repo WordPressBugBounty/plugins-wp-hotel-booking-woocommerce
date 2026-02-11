@@ -27,7 +27,6 @@ foreach ( $cart_items as $key => $cart_item ) {
 	<thead>
 	<tr>
 		<th class="product-name"><?php _e( 'Product', 'wp-hotel-booking-woocommerce' ); ?></th>
-		<th class="product-name"><?php _e( 'Check In - Check Out', 'wp-hotel-booking-woocommerce' ); ?></th>
 		<th class="product-total"><?php _e( 'Total', 'wp-hotel-booking-woocommerce' ); ?></th>
 	</tr>
 	</thead>
@@ -39,15 +38,64 @@ foreach ( $cart_items as $key => $cart_item ) {
 		$_product = apply_filters( 'woocommerce_cart_item_product', $cart_item['data'], $cart_item, $cart_item_key );
 
 		if ( $_product && $_product->exists() && $cart_item['quantity'] > 0 && apply_filters( 'woocommerce_checkout_cart_item_visible', true, $cart_item, $cart_item_key ) ) {
-			?>
+			if (get_post_type($cart_item['product_id']) === 'hb_extra_room') {
+				continue;
+			}
+            ?>
 			<tr class="<?php echo esc_attr( apply_filters( 'woocommerce_cart_item_class', 'cart_item', $cart_item, $cart_item_key ) ); ?>">
 				<td class="product-name">
 					<?php echo apply_filters( 'woocommerce_cart_item_name', $_product->get_name(), $cart_item, $cart_item_key ) . '&nbsp;'; ?>
 					<?php echo apply_filters( 'woocommerce_checkout_cart_item_quantity', ' <strong class="product-quantity">' . sprintf( '&times; %s', $cart_item['quantity'] ) . '</strong>', $cart_item, $cart_item_key ); ?>
 					<?php echo wc_get_formatted_cart_item_data( $cart_item ); ?>
-				</td>
-				<td class="product-check-in-out">
-					<?php echo isset( $cart_item['check_in_date'] ) && get_post_type( $cart_item['product_id'] ) === 'hb_room' ? date_i18n( hb_get_date_format(), strtotime( $cart_item['check_in_date'] ) ) . ' - ' . date_i18n( hb_get_date_format(), strtotime( $cart_item['check_out_date'] ) ) : ''; ?>
+                    <?php
+					if (get_post_type($cart_item['product_id']) === 'hb_room') {
+						?>
+                        <div class="date">
+                            <span><?php esc_html_e('Date:', 'wp-hotel-booking-woocommerce'); ?></span>
+                            <span>
+                                    <?php
+									echo isset( $cart_item['check_in_date'] )  ? date_i18n( hb_get_date_format(), strtotime( $cart_item['check_in_date'] ) ) . ' - ' . date_i18n( hb_get_date_format(), strtotime( $cart_item['check_out_date'] ) ) : '';
+									?>
+                                </span>
+                        </div>
+                        <div class="details">
+                            <span><?php esc_html_e('Details:', 'wp-hotel-booking-woocommerce'); ?></span>
+                            <span>
+                                    <?php
+									$adult_qty = $cart_item['adult_qty'] ?? '';
+									$child_qty = $cart_item['child_qty'] ?? '';
+									printf( esc_html__( 'Adult: %1$s; Child: %2$s', 'wp-hotel-booking-woocommerce' ), $adult_qty, $child_qty );
+									?>
+                                </span>
+                        </div>
+						<?php
+						$hb_optional_quantity = $cart_item['hb_optional_quantity'] ?? array();
+
+						if(count($hb_optional_quantity) > 0){
+							?>
+                            <div class="extra-service">
+                                <span><?php esc_html_e('Extra services:', 'wp-hotel-booking-woocommerce'); ?></span>
+								<?php
+								foreach ($hb_optional_quantity as $id => $num) {
+									if (get_post_type($id) !== 'hb_extra_room') {
+										continue;
+									}
+									$extra_room = get_post($id);
+									?>
+                                    <div class="extra-service-item">
+										<?php
+										$price = get_post_meta($id, 'tp_hb_extra_room_price', true);
+										echo esc_html($extra_room->post_title) . '(' . hb_format_price($price) . ' x ' . $num . ')';
+										?>
+                                    </div>
+									<?php
+								}
+								?>
+                            </div>
+							<?php
+						}
+					}
+                    ?>
 				</td>
 				<td class="product-total">
 					<?php echo apply_filters( 'woocommerce_cart_item_subtotal', WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] ), $cart_item, $cart_item_key ); ?>

@@ -27,6 +27,8 @@ if ( ! class_exists( 'HB_WC_Booking' ) ) {
 
 			// booking status filter
 			add_filter( 'hotel_booking_booking_total', array( $this, 'booking_status' ), 10, 3 );
+			add_action( 'woocommerce_after_calculate_totals', array( $this, 'update_price_for_room' ), 11 );
+			add_filter( 'woocommerce_cart_item_subtotal', array( $this, 'update_subtotal' ), 10, 2 );
 		}
 
 		/**
@@ -87,6 +89,16 @@ if ( ! class_exists( 'HB_WC_Booking' ) ) {
 			}
 
 			return $html;
+		}
+
+		public function update_price_for_room( $cart_object ) {
+			new RoomCartTotal( $cart_object );
+		}
+
+		public static function update_subtotal( $value, $cart_item ) {
+			$value = wc_price($cart_item['line_subtotal']);
+
+			return $value;
 		}
 	}
 }

@@ -1,6 +1,6 @@
 /**
  * WooCommerce Blocks integration for Hotel Booking
- * Displays check-in and check-out dates for hb_room products in cart/checkout blocks
+ * Displays additional info for hb_room products in cart/checkout blocks
  */
 
 (function () {
@@ -16,42 +16,35 @@
         const { registerCheckoutFilters } = window.wc.blocksCheckout;
 
         // Register filters for WooCommerce Blocks cart
-        registerCheckoutFilters('hotel-booking-dates', {
+        registerCheckoutFilters('hotel-booking-additional-info', {
             itemName: (value, extensions, args) => {
-                // Access booking dates from the hotel-booking namespace in extensions
                 const hotelData = extensions?.['wp-hotel-booking'];
 
-                // Check if we have booking dates in the extension data
-                if (!hotelData || !hotelData.check_in_date || !hotelData.check_out_date) {
+                if (!hotelData || !hotelData.additional_info ) {
                     return value;
                 }
 
-                // Create the dates HTML to append
-                const datesHtml = `
-				<div class="hb-room-booking-dates">
-					<div class="hb-check-in-date">
-						<strong>${wphbWcSettings.checkin}:</strong> <span>${hotelData.check_in_date}</span>
-					</div>
-					<div class="hb-check-out-date">
-						<strong>${wphbWcSettings.checkout}:</strong> <span>${hotelData.check_out_date}</span>
-					</div>
+                // Create the additional HTML to append
+                const additionalInfoHtml = `
+				<div class="hb-room-booking-additional-info">
+					${hotelData.additional_info}
 				</div>
 			`;
 
-                return value + datesHtml;
+                return value + additionalInfoHtml;
             },
 
             // Add custom class for hotel extra items
             cartItemClass: (value, extensions, args) => {
                 const hotelData = extensions?.['wp-hotel-booking'];
-
+                console.log(hotelData);
                 // Add custom class if this is a hotel extra product
                 if (hotelData && hotelData.is_hotel_extra === true) {
                     return `${value} hb-hotel-extra-item`;
                 }
 
                 return value;
-            }
+            },
         });
 
         return true;
@@ -75,10 +68,5 @@
         }
     };
 
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryInitialize);
-    } else {
-        tryInitialize();
-    }
+    tryInitialize();
 })();

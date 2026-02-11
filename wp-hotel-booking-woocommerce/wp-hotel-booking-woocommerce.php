@@ -4,11 +4,11 @@
  * Plugin URI: http://thimpress.com/
  * Description: Support paying for a booking with the payment system provided by WooCommerce
  * Author: ThimPress
- * Version: 2.0.2
+ * Version: 2.0.3
  * Author URI: http://thimpress.com
  * Tags: wphb
  * Requires at least: 6.0
- * Requires PHP: 7.0
+ * Requires PHP: 7.4
  * WC tested up to: 9.9.5
  * Text Domain: wp-hotel-booking-woocommerce
  * Domain Path: /lang/
@@ -148,6 +148,8 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 				'product_id'     => $params['product_id'] ?? 0,
 				'check_in_date'  => $params['check_in_date'] ?? '',
 				'check_out_date' => $params['check_out_date'] ?? '',
+				'adult_qty' => $params['adult_qty'] ?? 0,
+				'child_qty' => $params['child_qty'] ?? 0,
 			);
 
 			if ( isset( $params['parent_id'] ) ) {
@@ -188,6 +190,9 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 				}
 			}
 			//                      add_action( 'hotel_booking_added_cart', array( $this, 'hotel_add_to_cart' ), 10, 2 );
+
+
+
 			do_action( 'hb_wc_after_add_to_cart', $cart_item_id, $params );
 
 			return $cart_item_id;
@@ -457,9 +462,10 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 		function product_class( $classname, $product_type, $post_type, $product_id ) {
 			if ( 'hb_room' == get_post_type( $product_id ) ) {
 				$classname = 'HB_WC_Product_Room';
-			} elseif ( 'hb_extra_room' == get_post_type( $product_id ) ) {
-				$classname = 'HB_WC_Product_Package';
 			}
+            /*elseif ( 'hb_extra_room' == get_post_type( $product_id ) ) {
+				$classname = 'HB_WC_Product_Package';
+			}*/
 
 			return $classname;
 		}
@@ -500,9 +506,9 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 						'woo_cart_id'    => $cart_id,
 					)
 				);
-				if ( $post_type === 'hb_extra_room' ) {
+				/*if ( $post_type === 'hb_extra_room' ) {
 					$cart_item['data']->set_parent_id( $cart_item['parent_id'] );
-				}
+				}*/
 			}
 
 			return $cart_item;
@@ -738,6 +744,7 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			require_once 'includes/class-hb-wc-product-package-order-item.php';
 			require_once 'includes/class-hb-wc-checkout.php';
 			require_once 'includes/class-hb-wc-booking.php';
+			require_once 'includes/class-room-cart-totals.php';
 			$this->settings = WPHB_Settings::instance();
 		}
 
@@ -1144,9 +1151,9 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			if ( 'hb_room' === get_post_type( $values['product_id'] ) ) {
 				$item->add_meta_data( '_hb_room_id', $values['product_id'], true );
 			}
-			if ( 'hb_extra_room' === get_post_type( $values['product_id'] ) ) {
+			/*if ( 'hb_extra_room' === get_post_type( $values['product_id'] ) ) {
 				$item->add_meta_data( '_hb_extra_room_id', $values['product_id'], true );
-			}
+			}*/
 		}
 
 		/**
@@ -1161,10 +1168,10 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 				if ( $room_id && 'hb_room' === get_post_type( $room_id ) ) {
 					$classname = 'WC_Order_Item_HBRoom_Product';
 				}
-				$package_id = wc_get_order_item_meta( $id, '_hb_extra_room_id' );
+				/*$package_id = wc_get_order_item_meta( $id, '_hb_extra_room_id' );
 				if ( $package_id && 'hb_extra_room' === get_post_type( $package_id ) ) {
 					$classname = 'WC_Order_Item_HBPackage_Product';
-				}
+				}*/
 			}
 
 			return $classname;
@@ -1212,6 +1219,12 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,
 				),
+                'additional_info'=> array(
+					'description' => __( 'Additional information for wp hotel booking', 'wp-hotel-booking-woocommerce' ),
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+                )
 			);
 		}
 
@@ -1224,9 +1237,59 @@ if ( ! class_exists( 'WP_Hotel_Booking_Woocommerce' ) ) {
 			$product_type = get_post_type( $cart_item['product_id'] );
 
 			// Check if this cart item has booking dates
-			if ( $product_type === 'hb_room' && ( isset( $cart_item['check_in_date'] ) && isset( $cart_item['check_out_date'] ) ) ) {
-				$data['check_in_date']  = $cart_item['check_in_date'];
-				$data['check_out_date'] = $cart_item['check_out_date'];
+			if ( $product_type === 'hb_room' ) {
+				if (isset( $cart_item['check_in_date'] ) && isset( $cart_item['check_out_date'] )) {
+					$data['check_in_date']  = $cart_item['check_in_date'];
+					$data['check_out_date'] = $cart_item['check_out_date'];
+				}
+
+				ob_start();
+                ?>
+                <div class="date">
+                    <span><?php esc_html_e('Date:', 'wp-hotel-booking-woocommerce'); ?></span>
+                    <span>
+                        <?php
+                        echo isset( $cart_item['check_in_date'] )  ? date_i18n( hb_get_date_format(), strtotime( $cart_item['check_in_date'] ) ) . ' - ' . date_i18n( hb_get_date_format(), strtotime( $cart_item['check_out_date'] ) ) : '';
+                        ?>
+                    </span>
+                </div>
+                <div class="details">
+                    <span><?php esc_html_e('Details:', 'wp-hotel-booking-woocommerce'); ?></span>
+                    <span>
+                    <?php
+                    $adult_qty = $cart_item['adult_qty'] ?? '';
+                    $child_qty = $cart_item['child_qty'] ?? '';
+                    printf( esc_html__( 'Adult: %1$s; Child: %2$s', 'wp-hotel-booking-woocommerce' ), $adult_qty, $child_qty );
+                    ?>
+                </span>
+                </div>
+				<?php
+				$hb_optional_quantity = $cart_item['hb_optional_quantity'] ?? array();
+				if(count($hb_optional_quantity) > 0){
+					?>
+                    <div class="extra-service">
+                        <span><?php esc_html_e('Extra services:', 'wp-hotel-booking-woocommerce'); ?></span>
+						<?php
+						foreach ($hb_optional_quantity as $id => $num) {
+							if (get_post_type($id) !== 'hb_extra_room') {
+								continue;
+							}
+							$extra_room = get_post($id);
+							?>
+                            <div class="extra-service-item">
+								<?php
+								$price = get_post_meta($id, 'tp_hb_extra_room_price', true);
+								echo esc_html($extra_room->post_title) . '(' . hb_format_price($price) . ' x ' . $num . ')';
+								?>
+                            </div>
+							<?php
+						}
+						?>
+                    </div>
+					<?php
+				}
+
+				$data['additional_info'] = ob_get_clean();
 			}
 
 			// Check if this is a hotel extra room product
